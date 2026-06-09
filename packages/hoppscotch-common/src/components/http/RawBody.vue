@@ -44,6 +44,20 @@
           @click="prettifyRequestBody"
         />
         <HoppButtonSecondary
+          v-if="
+            [
+              'application/json',
+              'application/ld+json',
+              'application/hal+json',
+              'application/vnd.api+json',
+            ].includes(body.contentType)
+          "
+          v-tippy="{ theme: 'tooltip' }"
+          title="Minify JSON"
+          :icon="minifyIcon"
+          @click="minifyRequestBody"
+        />
+        <HoppButtonSecondary
           v-if="shouldEnableAIFeatures"
           v-tippy="{ theme: 'tooltip' }"
           :title="t('ai_experiments.modify_with_ai')"
@@ -86,6 +100,7 @@ import IconWrapText from "~icons/lucide/wrap-text"
 import IconTrash2 from "~icons/lucide/trash-2"
 import IconFilePlus from "~icons/lucide/file-plus"
 import IconWand2 from "~icons/lucide/wand-2"
+import IconMinimize from "~icons/lucide/minimize" // <-- NEW ICON IMPORT
 import IconCheck from "~icons/lucide/check"
 import IconInfo from "~icons/lucide/info"
 import IconSparkles from "~icons/lucide/sparkles"
@@ -140,6 +155,14 @@ const prettifyIcon = refAutoReset<
   typeof IconWand2 | typeof IconCheck | typeof IconInfo
 >(IconWand2, 1000)
 
+// ==========================================
+// NEW FEATURE: Minify Icon State Tracking
+// ==========================================
+const minifyIcon = refAutoReset<
+  typeof IconMinimize | typeof IconCheck | typeof IconInfo
+>(IconMinimize, 1000)
+// ==========================================
+
 const rawInputEditorLang = computed(() =>
   getEditorLangForMimeType(body.value.contentType)
 )
@@ -158,7 +181,6 @@ const codemirrorValue: Ref<string | undefined> =
 watch(rawParamsBody, (newVal) => {
   typeof newVal === "string"
     ? (codemirrorValue.value = newVal)
-    : (codemirrorValue.value = undefined)
 })
 
 // propagate the edits from codemirror back to the body
@@ -224,6 +246,26 @@ const prettifyRequestBody = () => {
     toast.error(`${t("error.json_prettify_invalid_body")}`)
   }
 }
+
+// ==========================================
+// NEW FEATURE: Minify Logic
+// ==========================================
+const minifyRequestBody = () => {
+  try {
+    if (body.value.contentType.endsWith("json")) {
+      const parsed = JSON.parse(rawParamsBody.value as string)
+      rawParamsBody.value = JSON.stringify(parsed) // Stringify without spaces
+      minifyIcon.value = IconCheck
+      toast.success("JSON minified successfully")
+    }
+  } catch (e) {
+    console.error(e)
+    minifyIcon.value = IconInfo
+    // Reusing the existing translation string for invalid JSON
+    toast.error(`${t("error.json_prettify_invalid_body")}`) 
+  }
+}
+// ==========================================
 
 const isModifyBodyModalOpen = ref(false)
 
